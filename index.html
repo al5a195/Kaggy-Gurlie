@@ -8,12 +8,30 @@
 </head>
 <body>
 
-<!-- Background music autoplay -->
-<audio id="bgMusic" loop hidden>
+<!-- Hidden background audio -->
+<audio id="bgMusic" loop>
   <source src="MP3/Tyla-Bliss.mp3" type="audio/mpeg">
   Your browser does not support the audio element.
 </audio>
 
+<!-- Trigger area -->
+<div id="click-to-play" style="
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  cursor: pointer;
+">
+  Tap or click to start music
+</div>
+
+<!-- Your heart SVG -->
 <svg viewBox="0 0 600 552">
   <path d="M300,107.77C284.68,55.67,239.76,0,162.31,0,64.83,0,0,82.08,0,171.71c0,.48,0,.95,0,1.43-.52,19.5,0,217.94,299.87,379.69v0l0,0,.05,0,0,0,0,0v0C600,391.08,600.48,192.64,600,173.14c0-.48,0-.95,0-1.43C600,82.08,535.17,0,437.69,0,360.24,0,315.32,55.67,300,107.77" fill="#ee5282"/>
 </svg>
@@ -23,21 +41,17 @@
 <script src='https://unpkg.com/gsap@3/dist/gsap.min.js'></script>
 <script src="./script.js"></script>
 
-<!-- JS fallback to trigger music after user interaction -->
 <script>
-  window.addEventListener('DOMContentLoaded', () => {
+  // Require click to play audio
+  document.getElementById('click-to-play').addEventListener('click', () => {
     const audio = document.getElementById('bgMusic');
-    const playAudio = () => {
-      audio.play().catch(e => {
-        console.log("Autoplay blocked:", e);
-      });
-    };
-    playAudio();
-    // Force play again on click in case browser blocks autoplay
-    window.addEventListener('click', playAudio, { once: true });
+    audio.play().then(() => {
+      document.getElementById('click-to-play').style.display = 'none';
+    }).catch(err => {
+      alert("Failed to start audio: " + err.message);
+    });
   });
 </script>
 
 </body>
 </html>
-
