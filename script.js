@@ -1,83 +1,88 @@
-console.clear();
+/* AUDIO */
+const backgroundMusic = document.getElementById('backgroundMusic');
+backgroundMusic.volume = 0.5; // Set volume to 50% to start
 
-/* SETUP */
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  5000
-);
-camera.position.z = 500;
+// Create audio controls UI
+function createAudioControls() {
+  const controls = document.createElement('div');
+  controls.style.position = 'absolute';
+  controls.style.bottom = '20px';
+  controls.style.left = '20px';
+  controls.style.zIndex = '1000';
+  controls.style.display = 'flex';
+  controls.style.gap = '10px';
+  controls.style.alignItems = 'center';
 
-const renderer = new THREE.WebGLRenderer();
-renderer.setPixelRatio(window.devicePixelRatio > 1 ? 2 : 1);
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+  // Play/Pause button
+  const playPauseBtn = document.createElement('button');
+  playPauseBtn.innerHTML = '⏵';
+  playPauseBtn.style.background = '#ee5282';
+  playPauseBtn.style.color = 'white';
+  playPauseBtn.style.border = 'none';
+  playPauseBtn.style.borderRadius = '50%';
+  playPauseBtn.style.width = '40px';
+  playPauseBtn.style.height = '40px';
+  playPauseBtn.style.cursor = 'pointer';
+  playPauseBtn.style.fontSize = '16px';
 
-/* CONTROLS */
-const controlsWebGL = new THREE.OrbitControls(camera, renderer.domElement);
+  // Volume control
+  const volumeSlider = document.createElement('input');
+  volumeSlider.type = 'range';
+  volumeSlider.min = '0';
+  volumeSlider.max = '1';
+  volumeSlider.step = '0.01';
+  volumeSlider.value = '0.5';
+  volumeSlider.style.width = '100px';
+  volumeSlider.style.accentColor = '#ee5282';
 
-/* PARTICLES */
-// Create a global gsap timeline that contains all tweens
-const tl = gsap.timeline({
-  repeat: -1,
-  yoyo: true
-});
+  // Current time display
+  const timeDisplay = document.createElement('span');
+  timeDisplay.style.color = 'white';
+  timeDisplay.style.fontFamily = 'Arial, sans-serif';
+  timeDisplay.style.fontSize = '14px';
 
-const path = document.querySelector("path");
-const length = path.getTotalLength();
-const vertices = [];
-for (let i = 0; i < length; i += 0.1) {
-  const point = path.getPointAtLength(i);
-  const vector = new THREE.Vector3(point.x, -point.y, 0);
-  vector.x += (Math.random() - 0.5) * 30;
-  vector.y += (Math.random() - 0.5) * 30;
-  vector.z += (Math.random() - 0.5) * 70;
-  vertices.push(vector);
-  // Create a tween for that vector
-  tl.from(vector, {
-      x: 600 / 2, // Center X of the heart
-      y: -552 / 2, // Center Y of the heart
-      z: 0, // Center of the scene
-      ease: "power2.inOut",
-      duration: "random(2, 5)" // Random duration
-    },
-    i * 0.002 // Delay calculated from the distance along the path
-  );
-}
-const geometry = new THREE.BufferGeometry().setFromPoints(vertices);
-const material = new THREE.PointsMaterial( { color: 0xee5282, blending: THREE.AdditiveBlending, size: 3 } );
-const particles = new THREE.Points(geometry, material);
-// Offset the particles in the scene based on the viewbox values
-particles.position.x -= 600 / 2;
-particles.position.y += 552 / 2;
-scene.add(particles);
+  controls.appendChild(playPauseBtn);
+  controls.appendChild(volumeSlider);
+  controls.appendChild(timeDisplay);
+  document.body.appendChild(controls);
 
-gsap.fromTo(scene.rotation, {
-  y: -0.2
-}, {
-  y: 0.2,
-  repeat: -1,
-  yoyo: true,
-  ease: 'power2.inOut',
-  duration: 3
-});
+  // Event listeners
+  playPauseBtn.addEventListener('click', () => {
+    if (backgroundMusic.paused) {
+      backgroundMusic.play();
+      playPauseBtn.innerHTML = '⏸';
+    } else {
+      backgroundMusic.pause();
+      playPauseBtn.innerHTML = '⏵';
+    }
+  });
 
-/* RENDERING */
-function render() {
-  requestAnimationFrame(render);
-  // Update the geometry from the animated vertices
-  geometry.setFromPoints(vertices);
-  renderer.render(scene, camera);
+  volumeSlider.addEventListener('input', () => {
+    backgroundMusic.volume = volumeSlider.value;
+  });
+
+  // Update time display
+  setInterval(() => {
+    const minutes = Math.floor(backgroundMusic.currentTime / 60);
+    const seconds = Math.floor(backgroundMusic.currentTime % 60);
+    timeDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }, 1000);
 }
 
-/* EVENTS */
-function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+// Start audio when user interacts with the page
+function initAudio() {
+  // Try to play audio
+  const playPromise = backgroundMusic.play();
+  
+  if (playPromise !== undefined) {
+    playPromise.catch(error => {
+      console.log("Autoplay prevented - showing play button");
+      // Still create controls even if autoplay is blocked
+      createAudioControls();
+    });
+  } else {
+    createAudioControls();
+  }
 }
-window.addEventListener("resize", onWindowResize, false);
 
-requestAnimationFrame(render);
+document.body.addEventListener('click', initAudio, { once: true });
