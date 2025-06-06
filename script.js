@@ -1,88 +1,120 @@
-/* AUDIO */
-const backgroundMusic = document.getElementById('backgroundMusic');
-backgroundMusic.volume = 0.5; // Set volume to 50% to start
+console.clear();
 
-// Create audio controls UI
-function createAudioControls() {
-  const controls = document.createElement('div');
-  controls.style.position = 'absolute';
-  controls.style.bottom = '20px';
-  controls.style.left = '20px';
-  controls.style.zIndex = '1000';
-  controls.style.display = 'flex';
-  controls.style.gap = '10px';
-  controls.style.alignItems = 'center';
+/* SETUP */
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  5000
+);
+camera.position.z = 500;
 
-  // Play/Pause button
-  const playPauseBtn = document.createElement('button');
-  playPauseBtn.innerHTML = '⏵';
-  playPauseBtn.style.background = '#ee5282';
-  playPauseBtn.style.color = 'white';
-  playPauseBtn.style.border = 'none';
-  playPauseBtn.style.borderRadius = '50%';
-  playPauseBtn.style.width = '40px';
-  playPauseBtn.style.height = '40px';
-  playPauseBtn.style.cursor = 'pointer';
-  playPauseBtn.style.fontSize = '16px';
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-  // Volume control
-  const volumeSlider = document.createElement('input');
-  volumeSlider.type = 'range';
-  volumeSlider.min = '0';
-  volumeSlider.max = '1';
-  volumeSlider.step = '0.01';
-  volumeSlider.value = '0.5';
-  volumeSlider.style.width = '100px';
-  volumeSlider.style.accentColor = '#ee5282';
+/* CONTROLS */
+const controlsWebGL = new THREE.OrbitControls(camera, renderer.domElement);
 
-  // Current time display
-  const timeDisplay = document.createElement('span');
-  timeDisplay.style.color = 'white';
-  timeDisplay.style.fontFamily = 'Arial, sans-serif';
-  timeDisplay.style.fontSize = '14px';
+/* PARTICLES */
+const tl = gsap.timeline({
+  repeat: -1,
+  yoyo: true
+});
 
-  controls.appendChild(playPauseBtn);
-  controls.appendChild(volumeSlider);
-  controls.appendChild(timeDisplay);
-  document.body.appendChild(controls);
+const path = document.querySelector("path");
+const length = path.getTotalLength();
+const vertices = [];
 
-  // Event listeners
-  playPauseBtn.addEventListener('click', () => {
-    if (backgroundMusic.paused) {
-      backgroundMusic.play();
-      playPauseBtn.innerHTML = '⏸';
-    } else {
-      backgroundMusic.pause();
-      playPauseBtn.innerHTML = '⏵';
-    }
-  });
-
-  volumeSlider.addEventListener('input', () => {
-    backgroundMusic.volume = volumeSlider.value;
-  });
-
-  // Update time display
-  setInterval(() => {
-    const minutes = Math.floor(backgroundMusic.currentTime / 60);
-    const seconds = Math.floor(backgroundMusic.currentTime % 60);
-    timeDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  }, 1000);
-}
-
-// Start audio when user interacts with the page
-function initAudio() {
-  // Try to play audio
-  const playPromise = backgroundMusic.play();
+for (let i = 0; i < length; i += 0.1) {
+  const point = path.getPointAtLength(i);
+  const vector = new THREE.Vector3(point.x, -point.y, 0);
+  vector.x += (Math.random() - 0.5) * 30;
+  vector.y += (Math.random() - 0.5) * 30;
+  vector.z += (Math.random() - 0.5) * 70;
+  vertices.push(vector);
   
-  if (playPromise !== undefined) {
-    playPromise.catch(error => {
-      console.log("Autoplay prevented - showing play button");
-      // Still create controls even if autoplay is blocked
-      createAudioControls();
-    });
-  } else {
-    createAudioControls();
-  }
+  tl.from(vector, {
+    x: 600 / 2,
+    y: -552 / 2,
+    z: 0,
+    ease: "power2.inOut",
+    duration: "random(2, 5)"
+  }, i * 0.002);
 }
 
-document.body.addEventListener('click', initAudio, { once: true });
+const geometry = new THREE.BufferGeometry().setFromPoints(vertices);
+const material = new THREE.PointsMaterial({ 
+  color: 0xee5282, 
+  blending: THREE.AdditiveBlending, 
+  size: 3 
+});
+const particles = new THREE.Points(geometry, material);
+particles.position.x -= 600 / 2;
+particles.position.y += 552 / 2;
+scene.add(particles);
+
+gsap.fromTo(scene.rotation, {
+  y: -0.2
+}, {
+  y: 0.2,
+  repeat: -1,
+  yoyo: true,
+  ease: 'power2.inOut',
+  duration: 3
+});
+
+/* AUDIO */
+const bgMusic = document.getElementById('backgroundMusic');
+bgMusic.volume = 0.3;
+
+function createMusicButton() {
+  const btn = document.createElement('div');
+  btn.innerHTML = '▶ Play Music';
+  btn.style.position = 'absolute';
+  btn.style.bottom = '20px';
+  btn.style.right = '20px';
+  btn.style.padding = '10px 15px';
+  btn.style.background = '#ee5282';
+  btn.style.color = 'white';
+  btn.style.borderRadius = '5px';
+  btn.style.cursor = 'pointer';
+  btn.style.zIndex = '100';
+  
+  btn.addEventListener('click', () => {
+    bgMusic.play();
+    btn.innerHTML = 'Music Playing';
+    setTimeout(() => btn.remove(), 2000);
+  });
+  
+  document.body.appendChild(btn);
+}
+
+// Start audio on first interaction
+document.body.addEventListener('click', function init() {
+  bgMusic.play().catch(e => {
+    console.log('Autoplay blocked, showing button');
+    createMusicButton();
+  });
+  document.body.removeEventListener('click', init);
+}, { once: true });
+
+/* RENDERING */
+function render() {
+  requestAnimationFrame(render);
+  geometry.setFromPoints(vertices);
+  renderer.render(scene, camera);
+  controlsWebGL.update();
+}
+
+/* EVENTS */
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+window.addEventListener("resize", onWindowResize, false);
+
+render();
