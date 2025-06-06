@@ -13,7 +13,23 @@ body {
 canvas {
   position: absolute;
 }
+
 svg {
   position: absolute;
   display: none;
+}
+
+/* Hide default audio controls */
+audio {
+  display: none;
+}
+
+/* Style for our custom audio controls */
+button {
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  transform: scale(1.1);
+  background: #ff6b9d !important;
 }
